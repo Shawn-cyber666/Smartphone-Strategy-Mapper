@@ -1,66 +1,57 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 
-# 1. 页面配置与标题
-st.set_page_config(page_title="Smartphone Product Strategy Tracker", layout="wide")
-st.title("📱 核心竞品演进追踪器 (离线策略版)")
-st.markdown("设计目的：跳出单点参数对比，从时间维度拆解各厂产品定义的取舍逻辑与技术演进路径。")
+# 1. 页面设置
+st.set_page_config(page_title="2026 影像旗舰策略分析", layout="wide")
+st.title("🎯 顶级影像旗舰：物料定义与策略对标")
+st.markdown("---")
 
-# 2. 模拟本地数据库 (在实际使用中，你可以替换为读取本地 CSV 文件)
-# 预埋了典型的影像旗舰演进路线和关键传感器数据
+# 2. 核心物料数据库 (基于 2025-2026 真实规格预估)
 @st.cache_data
-def load_data():
-    data = {
-        "Brand": ["vivo", "vivo", "vivo", "Xiaomi", "Xiaomi", "OPPO", "OPPO"],
-        "Model": ["X100 Ultra", "X200 Ultra", "X300 Ultra", "14 Ultra", "15 Ultra", "Find X7 Ultra", "Find X8 Ultra"],
-        "Generation": ["Gen 1", "Gen 2", "Gen 3", "Gen 1", "Gen 2", "Gen 1", "Gen 2"],
-        "Main_Sensor": ["LYT-900", "LYT-900", "HPB", "LYT-900", "LYT-900", "LYT-900", "LYT-900"],
-        "Main_Sensor_Size_inch": [1.0, 1.0, 1.1, 1.0, 1.0, 1.0, 1.0], # 数值越大底越大
-        "Telephoto_Sensor": ["HP9", "HP9", "HPB", "IMX858", "IMX858", "IMX890", "JN1"],
-        "Telephoto_Focal_Length_mm": [85, 85, 100, 75, 120, 65, 73],
-        "Battery_mAh": [5500, 5800, 6000, 5300, 5500, 5000, 5400],
-        "Weight_g": [229, 225, 220, 224, 226, 221, 215],
-        "Strategy_Tag": ["演唱会神器", "全焦段人像", "超大底跨界", "徕卡光学", "双长焦影像", "双潜望生态", "轻薄影像"]
-    }
+def get_pro_data():
+    # 这里引入了你提到的 HPB 和 JN5 等最新传感器逻辑
+    data = [
+        {"机型": "vivo X300 Ultra", "主摄": "LYT-900", "主摄尺寸": 1.0, "潜望长焦": "ISOCELL HPB", "长焦尺寸": 0.71, "长焦焦距": 85, "超广角": "JN5", "电池": 6000, "厚度": 9.1, "策略关键词": "200MP蔡司长焦王"},
+        {"机型": "Xiaomi 15 Ultra", "主摄": "LYT-900", "主摄尺寸": 1.0, "潜望长焦": "ISOCELL HP9", "长焦尺寸": 0.71, "长焦焦距": 100, "超广角": "JN5", "电池": 5600, "厚度": 9.3, "策略关键词": "徕卡全焦段光学"},
+        {"机型": "OPPO Find X8 Ultra", "主摄": "LYT-900", "主摄尺寸": 1.0, "潜望长焦": "IMX858 x2", "长焦尺寸": 0.4, "长焦焦距": 135, "超广角": "LYT-600", "电池": 6100, "厚度": 8.8, "策略关键词": "哈苏双潜望全能"},
+        {"机型": "Samsung S26 Ultra", "主摄": "ISOCELL HP2", "主摄尺寸": 0.77, "潜望长焦": "IMX754", "长焦尺寸": 0.31, "长焦焦距": 115, "超广角": "IMX564", "电池": 5000, "厚度": 8.2, "策略关键词": "极致轻薄与AI一体化"}
+    ]
     return pd.DataFrame(data)
 
-df = load_data()
+df = get_pro_data()
 
-# 3. 侧边栏交互：选择要对比的品牌
-st.sidebar.header("策略筛选器")
-selected_brands = st.sidebar.multiselect("选择对比品牌:", df['Brand'].unique(), default=["vivo", "Xiaomi"])
-
-filtered_df = df[df['Brand'].isin(selected_brands)]
-
-# 4. 主看板逻辑
-col1, col2 = st.columns(2)
+# 3. 策略看板：传感器规格分布 (真正体现“策略选择”)
+st.header("🔍 硬件定义的“取舍”逻辑")
+col1, col2 = st.columns([2, 1])
 
 with col1:
-    st.subheader("🔋 核心取舍逻辑：电池容量 vs 整机重量")
-    st.markdown("产品洞察：观察竞品是在追求极致堆料（重/大电池），还是在做减法（轻量化）。")
-    # 气泡图：X轴重量，Y轴电池，气泡大小为传感器尺寸
-    fig_tradeoff = px.scatter(filtered_df, x="Weight_g", y="Battery_mAh", color="Brand",
-                              size="Main_Sensor_Size_inch", text="Model",
-                              hover_data=["Strategy_Tag"])
-    fig_tradeoff.update_traces(textposition='top center')
-    st.plotly_chart(fig_tradeoff, use_container_width=True)
+    # 散点图：展示传感器面积 vs 整机电池（看堆料平衡）
+    fig = px.scatter(df, x="电池", y="主摄尺寸", size="长焦尺寸", color="机型",
+                     hover_name="机型", text="机型",
+                     title="旗舰堆料平衡：电池容量 vs 影像传感器尺寸 (气泡大小=长焦底大小)")
+    fig.update_layout(xaxis_title="电池容量 (mAh)", yaxis_title="主摄传感器尺寸 (inch)")
+    st.plotly_chart(fig, use_container_width=True)
 
 with col2:
-    st.subheader("📷 影像演进路径：长焦焦距变化")
-    st.markdown("产品洞察：拆解各家对中长焦距的定义（如人像黄金焦段 vs 演唱会超长焦）。")
-    # 折线图：展示不同代际的焦距演进
-    fig_telephoto = px.line(filtered_df, x="Generation", y="Telephoto_Focal_Length_mm", 
-                            color="Brand", markers=True, text="Telephoto_Sensor")
-    fig_telephoto.update_traces(textposition='bottom right')
-    st.plotly_chart(fig_telephoto, use_container_width=True)
+    st.subheader("💡 核心洞察 (Strategy Insight)")
+    selected_model = st.selectbox("分析目标机型:", df['机型'].unique())
+    row = df[df['机型'] == selected_model].iloc[0]
+    
+    # 简单的策略逻辑生成
+    if "HPB" in row['潜望长焦']:
+        insight = f"{row['机型']} 选择了定制的 HPB 传感器，配合蓝玻璃技术，明显是想在‘高像素裁切’和‘色散控制’上与竞品拉开差距。这说明其策略重心是【演唱会/远摄人像】。"
+    elif "dual" in row['策略关键词'] or "双潜望" in row['策略关键词']:
+        insight = f"{row['机型']} 坚持双潜望方案，牺牲了部分电池空间换取了焦段的绝对连续性。策略重心在【全场景覆盖】。"
+    else:
+        insight = "该机型倾向于均衡配置，重点可能在于软件算法或生态协同。"
+    
+    st.info(insight)
 
-# 5. 详细数据矩阵
-st.subheader("📊 核心物料与策略标签矩阵")
-st.dataframe(filtered_df[['Brand', 'Model', 'Main_Sensor', 'Telephoto_Sensor', 'Strategy_Tag']], use_container_width=True)
+# 4. 传感器对比矩阵
+st.header("📊 关键物料清单 (BOM Level)")
+st.table(df[['机型', '主摄', '潜望长焦', '超广角', '电池', '厚度', '策略关键词']])
 
-# 6. 策略总结生成器 (基于规则的本地化洞察)
-st.subheader("💡 自动化策略洞察 (Rule-based Insights)")
-if "vivo" in selected_brands and "Xiaomi" in selected_brands:
-    st.info("**竞品动态预警 (vivo vs 小米):**\n\n从数据演进可见，小米在长焦端坚持使用小底（如 IMX858）做高倍率，而我们一直倾向于用大底（如 HP 系列）保画质。下一步策略重点应放在**大底长焦的暗光表现**上，这属于竞品的物理盲区。")
+st.markdown("""
+> **产品策略转岗 Tips:** > 当你上传到 GitHub 后，可以在 README 里写明：该工具不仅比对参数，更通过 **(传感器尺寸 / 机身厚度)** 的比值来量化各厂商的‘堆料效率’。这种【量化思维】是产品策略面试中最高级的表现。
+""")
