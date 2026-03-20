@@ -4,99 +4,101 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # --- 1. 页面专业化配置 ---
-st.set_page_config(page_title="Ultra-Flagship Strategy Lab 2026", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Ultra-Flagship Strategy Lab 2026", layout="wide")
 
-# 自定义 CSS 提升视觉高级感
-st.markdown("""
-    <style>
-    .main { background-color: #f8f9fa; }
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    h1, h2 { color: #1e293b; font-weight: 800; }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- 2. 核心物料策略数据库 (2026 最新行业口径) ---
+# --- 2. 核心物料数据库 (2026 最新行业口径) ---
 @st.cache_data
 def get_industry_data():
-    # 逻辑：传感器面积按 inch 换算成近似 mm² 以便量化
     data = [
-        {"机型": "vivo X300 Ultra", "主摄": "LYT-900(1\")", "长焦": "HPB(1/1.4\")", "超广角": "JN5", "电池": 6000, "重量": 225, "厚度": 9.1, "影像分": 98, "策略": "极致长焦"},
-        {"机型": "Xiaomi 15 Ultra", "主摄": "LYT-900(1\")", "长焦": "HP9(1/1.4\")", "超广角": "JN5", "电池": 5600, "重量": 229, "厚度": 9.3, "影像分": 96, "策略": "全焦段光学"},
-        {"机型": "Find X8 Ultra", "主摄": "LYT-900(1\")", "长焦": "IMX858 x2", "超广角": "LYT-600", "电池": 6100, "重量": 221, "厚度": 8.8, "影像分": 94, "策略": "双潜望平衡"},
-        {"机型": "S26 Ultra", "主摄": "HP2(1/1.3\")", "长焦": "IMX754", "超广角": "IMX564", "电池": 5000, "重量": 210, "厚度": 8.2, "影像分": 85, "策略": "轻薄AI旗舰"}
+        {"机型": "vivo X300 Ultra", "影像得分": 98, "续航得分": 92, "手感得分": 85, "屏幕得分": 95, "性能得分": 98, "电池": 6000, "重量": 225, "厚度": 9.1, "主摄": "LYT-900", "长焦": "HPB"},
+        {"机型": "Xiaomi 15 Ultra", "影像得分": 96, "续航得分": 88, "手感得分": 82, "屏幕得分": 97, "性能得分": 99, "电池": 5600, "重量": 229, "厚度": 9.3, "主摄": "LYT-900", "长焦": "HP9"},
+        {"机型": "Find X8 Ultra", "影像得分": 94, "续航得分": 95, "手感得分": 88, "屏幕得分": 94, "性能得分": 97, "电池": 6100, "重量": 221, "厚度": 8.8, "主摄": "LYT-900", "长焦": "IMX858 x2"},
+        {"机型": "S26 Ultra", "影像得分": 85, "续航得分": 82, "手感得分": 95, "屏幕得分": 99, "性能得分": 96, "电池": 5000, "重量": 210, "厚度": 8.2, "主摄": "HP2", "长焦": "IMX754"}
     ]
-    df = pd.DataFrame(data)
-    # 计算核心指标：堆料密度 (影像分 / 厚度)
-    df['堆料效率'] = (df['影像分'] / df['厚度']).round(2)
-    return df
+    return pd.DataFrame(data)
 
 df = get_industry_data()
 
-# --- 3. 顶部 Executive Summary ---
-st.title("🛡️ 2026 影像旗舰产品策略分析系统")
-st.markdown("针对 **vivo / 小米 / OPPO** 顶峰机型的技术取舍与供应链能力建模")
+# --- 3. 顶部导航与全局指标 ---
+st.title("🛡️ 2026 影像旗舰产品策略推演系统")
+st.markdown("从**产品定义**视角出发，量化分析 vivo 与竞品的战略取舍")
 
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("行业平均电池", f"{int(df['电池'].mean())} mAh", "↑ 200 vs 2025")
-m2.metric("主流主摄规格", "1.0-inch LYT-900")
-m3.metric("长焦天花板", "ISOCELL HPB", "定制蓝玻璃")
-m4.metric("策略趋势", "轻薄化影像")
+# --- 4. 功能分区 (使用 Tabs 切换) ---
+tab_radar, tab_quadrant, tab_vertical, tab_sandbox = st.tabs([
+    "🎯 产品基因雷达 (DNA)", 
+    "📊 竞争格局象限", 
+    "📈 垂直参数对标", 
+    "🛠️ 定义推演沙盒"
+])
 
-st.markdown("---")
-
-# --- 4. 核心逻辑：Trade-off 象限图 ---
-tab1, tab2 = st.tabs(["📊 竞争格局象限", "📑 详细物料对标"])
-
-with tab1:
-    col_left, col_right = st.columns([3, 1])
+# --- Tab 1: 雷达图 (展示单个产品的平衡感) ---
+with tab_radar:
+    st.subheader("机型战略基因图谱")
+    target_model = st.selectbox("选择要分析的机型", df['机型'].unique())
+    model_data = df[df['机型'] == target_model].iloc[0]
     
-    with col_left:
-        # 逻辑：X轴是便携性（重量反比），Y轴是影像能力
-        fig = px.scatter(df, x="重量", y="影像分", size="电池", color="机型",
-                         text="机型", title="产品定义：性能天花板 vs 物理极限 (气泡大小=电池容量)",
-                         labels={"影像分": "影像能力建模得分", "重量": "整机重量 (g)"},
-                         range_x=[200, 240], range_y=[80, 105])
-        
-        # 添加象限中线
-        fig.add_hline(y=df['影像分'].mean(), line_dash="dash", line_color="gray", annotation_text="行业均值")
-        fig.add_vline(x=df['重量'].mean(), line_dash="dash", line_color="gray")
-        
-        fig.update_traces(textposition='top center', marker=dict(line=dict(width=2, color='DarkSlateGrey')))
-        st.plotly_chart(fig, use_container_width=True)
-
-    with col_right:
-        st.subheader("💡 竞争态势速递")
-        st.write("**右上象限 (Powerhouse):** 极致堆料，代表 vivo 与小米。策略是以重量换取绝对的影像制高点。")
-        st.write("**左下象限 (Efficiency):** 三星策略，放弃极致硬件，主打 AI 和极致手感。")
-        st.warning("关键洞察：vivo X300 Ultra 在更轻的重量下实现了更高的影像分，体现了定制 HPB 传感器带来的‘高能量密度’优势。")
-
-# --- 5. 详细物料与“推演模拟” ---
-with tab2:
-    st.subheader("核心 BOM 清单与策略标签")
+    categories = ['影像得分', '续航得分', '手感得分', '屏幕得分', '性能得分']
     
-    # 格式化表格显示
-    styled_df = df.style.background_gradient(subset=['堆料效率'], cmap='Greens')
-    st.table(styled_df)
+    fig_radar = go.Figure()
+    fig_radar.add_trace(go.Scatterpolar(
+        r=[model_data[c] for c in categories],
+        theta=categories,
+        fill='toself',
+        name=target_model,
+        line_color='#0052D4'
+    ))
+    fig_radar.update_layout(
+        polar=dict(radialaxis=dict(visible=True, range=[80, 100])),
+        showlegend=False,
+        title=f"{target_model} 的综合产品力分布"
+    )
+    st.plotly_chart(fig_radar, use_container_width=True)
 
-    # 策略推演模块
-    st.markdown("### 🛠️ 产品定义推演 (Sandbox)")
-    with st.expander("如果你是 vivo 的 Product Manager，该如何平衡 X400 的定义？"):
-        target_battery = st.slider("目标电池容量 (mAh)", 5000, 7000, 6000)
-        target_sensor = st.select_slider("主摄传感器级别", options=["1/1.3\"", "1.0-inch", "1.1-inch (Next Gen)"])
+# --- Tab 2: 象限图 (保留原有能力) ---
+with tab_quadrant:
+    st.subheader("影像能力 vs. 物理极限 象限分析")
+    fig_q = px.scatter(df, x="重量", y="影像得分", size="电池", color="机型",
+                       text="机型", hover_data=['厚度'],
+                       range_x=[200, 240], range_y=[80, 105])
+    fig_q.add_hline(y=df['影像得分'].mean(), line_dash="dash", line_color="red")
+    fig_q.add_vline(x=df['重量'].mean(), line_dash="dash", line_color="green")
+    st.plotly_chart(fig_q, use_container_width=True)
+
+# --- Tab 3: 垂直对比图 (新增需求) ---
+with tab_vertical:
+    st.subheader("关键硬件参数垂直对标")
+    compare_attr = st.segmented_control(
+        "选择对比维度", 
+        options=["电池", "重量", "厚度", "影像得分"], 
+        default="电池"
+    )
+    
+    fig_v = px.bar(df.sort_values(compare_attr), x="机型", y=compare_attr, 
+                   color="机型", text_auto=True,
+                   title=f"各旗舰机型 {compare_attr} 垂直对比 (升序)")
+    fig_v.update_layout(showlegend=False)
+    st.plotly_chart(fig_v, use_container_width=True)
+
+# --- Tab 4: 推演沙盒 (保留原有能力) ---
+with tab_sandbox:
+    st.subheader("Product Manager 决策模拟器")
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        target_bat = st.slider("目标电池 (mAh)", 5000, 7000, 6000)
+        target_cam = st.radio("主摄方案", ["1/1.3\" (轻薄型)", "1.0\" (专业型)", "1.1\" (突破型)"])
+    
+    with c2:
+        # 简单建模逻辑
+        base_thick = 8.0 + (target_bat - 5000)/500
+        cam_thick = 0.5 if "1.0" in target_cam else (1.2 if "1.1" in target_cam else 0)
+        final_thick = base_thick + cam_thick
         
-        # 模拟计算逻辑
-        est_thickness = 8.0 + (target_battery - 5000)/500 + (0.5 if "1.1" in target_sensor else 0)
-        est_weight = 200 + (target_battery - 5000)/20 + (10 if "1.1" in target_sensor else 0)
-        
-        c1, c2 = st.columns(2)
-        c1.metric("预估整机厚度", f"{est_thickness:.2f} mm")
-        c2.metric("预估整机重量", f"{est_weight:.1f} g")
-        
-        if est_weight > 235:
-            st.error("⚠️ 警告：整机重量超过 235g，属于‘坠手’级别，营销端极难转化，建议缩减主摄规格或引入新材料。")
+        st.metric("预估整机厚度", f"{final_thick:.2f} mm")
+        if final_thick > 9.5:
+            st.error("❌ 警告：厚度超过 9.5mm，用户握持感将严重下滑，建议削减规格。")
         else:
-            st.success("✅ 策略可行：该配置在当前供应链能力下可实现平衡。")
+            st.success("✅ 策略建议：该厚度在顶级旗舰中属于竞争优势范围。")
 
-# --- 6. 底部注脚 ---
+# --- 5. 底部数据矩阵 ---
 st.markdown("---")
-st.caption("Internal Strategy Tool © 2026 | 基于 GitHub 与 Streamlit Cloud 构建 | 专注于移动影像产品逻辑拆解")
+st.dataframe(df[['机型', '主摄', '长焦', '电池', '重量', '厚度']], use_container_width=True)
